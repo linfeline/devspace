@@ -344,6 +344,15 @@
           "minimum": 0,
           "maximum": 600
         },
+        "persistentRefreshTokenClients": {
+          "default": [],
+          "description": "Registered client IDs that keep the same refresh token and extend its expiry instead of rotating it, for hosts that require persistent linking. All other clients rotate.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
         "scopes": {
           "default": [
             "devspace"
@@ -369,6 +378,9 @@
             "chatgpt.com",
             "claude.ai",
             "claude.com",
+            "oauth-redirect.googleusercontent.com",
+            "oauth-redirect-sandbox.googleusercontent.com",
+            "oauth-redirect-test.googleusercontent.com",
             "localhost",
             "127.0.0.1"
           ],

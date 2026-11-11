@@ -66,6 +66,8 @@ const oauthConfigSchema = z.object({
   refreshTokenTtlSeconds: z.number().int().positive().default(30 * 24 * 60 * 60),
   refreshTokenGraceSeconds: z.number().int().min(0).max(600).default(0)
     .describe("Allow refresh-token retries for up to this many seconds after rotation. Zero consumes tokens immediately."),
+  persistentRefreshTokenClients: z.array(z.string().trim().min(1)).default([])
+    .describe("Registered client IDs that keep the same refresh token and extend its expiry instead of rotating it, for hosts that require persistent linking. All other clients rotate."),
   scopes: z.array(z.string().trim().min(1)).min(1).default(["devspace"]),
   allowedResourceUrls: z.array(z.string().trim().url().refine((value) => {
     const url = URL.parse(value);
@@ -79,6 +81,9 @@ const oauthConfigSchema = z.object({
     "chatgpt.com",
     "claude.ai",
     "claude.com",
+    "oauth-redirect.googleusercontent.com",
+    "oauth-redirect-sandbox.googleusercontent.com",
+    "oauth-redirect-test.googleusercontent.com",
     "localhost",
     "127.0.0.1",
   ]),

@@ -169,6 +169,35 @@ export class SqliteOAuthStore {
     }, "immediate");
   }
 
+  /**
+   * Extend an existing refresh token without rotating it. Returns false when the
+   * row is missing, belongs to another client, or has already expired, so a
+   * revoked or stale token can never be revived.
+   */
+  extendRefreshToken(
+    tokenHash: string,
+    clientId: string,
+    record: Omit<PersistedRefreshTokenRecord, "clientId">,
+    nowSeconds: number,
+  ): boolean {
+    const result = this.database.sqlite
+      .prepare(
+        `update oauth_refresh_tokens
+            set scopes_json = ?, expires_at = ?, resource = ?
+          where token_hash = ? and client_id = ? and expires_at >= ?`,
+      )
+      .run(
+        JSON.stringify(record.scopes),
+        record.expiresAt,
+        record.resource ?? null,
+        tokenHash,
+        clientId,
+        nowSeconds,
+      );
+
+    return result.changes === 1;
+  }
+
   getRefreshToken(tokenHash: string): PersistedRefreshTokenRecord | undefined {
     // SAFETY: The surrounding checks or construction already match this type.
     const row = this.database.sqlite

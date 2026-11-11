@@ -17,6 +17,7 @@ export interface OAuthConfig {
   accessTokenTtlSeconds: number;
   refreshTokenTtlSeconds: number;
   refreshTokenGraceSeconds?: number;
+  persistentRefreshTokenClients?: string[];
   scopes: string[];
   allowedResourceUrls: string[];
   allowedRedirectHosts: string[];
@@ -123,6 +124,7 @@ export class SingleUserOAuthProvider implements OAuthServerProvider {
   private readonly oauthStore: SqliteOAuthStore;
   private readonly resourceServerUrl: URL;
   private readonly allowedResourceUrls: Set<string>;
+  private readonly persistentRefreshTokenClients: Set<string>;
 
   constructor(
     private readonly config: OAuthConfig,
@@ -135,6 +137,7 @@ export class SingleUserOAuthProvider implements OAuthServerProvider {
     );
     this.oauthStore = new SqliteOAuthStore(stateDir, config.refreshTokenGraceSeconds ?? 0);
     this.clientsStore = new SqliteOAuthClientsStore(this.oauthStore, config.allowedRedirectHosts);
+    this.persistentRefreshTokenClients = new Set(config.persistentRefreshTokenClients ?? []);
   }
 
   async authorize(
@@ -255,6 +258,16 @@ export class SingleUserOAuthProvider implements OAuthServerProvider {
       throw new AccessDeniedError("Refresh token cannot grant requested scopes");
     }
 
+    if (this.persistentRefreshTokenClients.has(client.client_id)) {
+      return this.issuePersistentTokens(
+        client.client_id,
+        refreshToken,
+        refreshTokenHash,
+        requestedScopes,
+        resource ?? recordedResource,
+      );
+    }
+
     return this.issueTokens(
       client.client_id,
       requestedScopes,
@@ -307,6 +320,48 @@ export class SingleUserOAuthProvider implements OAuthServerProvider {
     }
 
     return record;
+  }
+
+  /**
+   * Reuse the presented refresh token and extend its expiry instead of rotating it.
+   * Hosts that require persistent linking, such as Google Gemini Connected Apps,
+   * keep the exact token they stored. Only clients listed explicitly in
+   * `persistentRefreshTokenClients` take this path; every other client rotates.
+   */
+  private issuePersistentTokens(
+    clientId: string,
+    refreshToken: string,
+    refreshTokenHash: string,
+    scopes: string[],
+    resource?: URL,
+  ): OAuthTokens {
+    const now = Math.floor(Date.now() / 1000);
+    const accessToken = randomToken();
+
+    const extended = this.oauthStore.extendRefreshToken(refreshTokenHash, clientId, {
+      scopes,
+      expiresAt: now + this.config.refreshTokenTtlSeconds,
+      resource: resource?.href,
+    }, now);
+
+    if (!extended) {
+      throw new InvalidGrantError("Invalid refresh token");
+    }
+
+    this.oauthStore.saveAccessToken(hashToken(accessToken), {
+      clientId,
+      scopes,
+      expiresAt: now + this.config.accessTokenTtlSeconds,
+      resource: resource?.href,
+    });
+
+    return {
+      access_token: accessToken,
+      token_type: "bearer",
+      expires_in: this.config.accessTokenTtlSeconds,
+      refresh_token: refreshToken,
+      scope: scopes.join(" "),
+    };
   }
 
   private issueTokens(

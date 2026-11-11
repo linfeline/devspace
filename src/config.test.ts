@@ -32,7 +32,17 @@ test("an empty config dir loads secure-by-default server config", (t) => {
   assert.equal(defaults.artifactsEnabled, false);
   assert.equal(defaults.subagents.enabled, false);
   assert.deepEqual(defaults.oauth.allowedResourceUrls, []);
-  assert.deepEqual(defaults.oauth.allowedRedirectHosts, ["chatgpt.com", "claude.ai", "claude.com", "localhost", "127.0.0.1"]);
+  assert.deepEqual(defaults.oauth.allowedRedirectHosts, [
+    "chatgpt.com",
+    "claude.ai",
+    "claude.com",
+    "oauth-redirect.googleusercontent.com",
+    "oauth-redirect-sandbox.googleusercontent.com",
+    "oauth-redirect-test.googleusercontent.com",
+    "localhost",
+    "127.0.0.1",
+  ]);
+  assert.deepEqual(defaults.oauth.persistentRefreshTokenClients, []);
   assert.equal(defaults.oauth.refreshTokenGraceSeconds, 0);
   assert.equal(defaults.logging.shellCommands, false);
   assert.equal(defaults.logging.trustProxy, false);

@@ -96,6 +96,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
       accessTokenTtlSeconds: stored.oauth.accessTokenTtlSeconds,
       refreshTokenTtlSeconds: stored.oauth.refreshTokenTtlSeconds,
       refreshTokenGraceSeconds: stored.oauth.refreshTokenGraceSeconds,
+      persistentRefreshTokenClients: stored.oauth.persistentRefreshTokenClients,
       scopes: stored.oauth.scopes,
       allowedResourceUrls: stored.oauth.allowedResourceUrls,
       allowedRedirectHosts: stored.oauth.allowedRedirectHosts,

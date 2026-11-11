@@ -29,6 +29,17 @@ test("oauth.refreshTokenGraceSeconds defaults to 0 and accepts integers from 0 t
   }
 });
 
+test("oauth.persistentRefreshTokenClients defaults to empty and accepts client IDs", () => {
+  assert.deepEqual(devspaceConfigSchema.parse({ configVersion: 1 }).oauth.persistentRefreshTokenClients, []);
+  assert.deepEqual(
+    devspaceConfigSchema.parse({
+      configVersion: 1,
+      oauth: { persistentRefreshTokenClients: ["devspace-client-id"] },
+    }).oauth.persistentRefreshTokenClients,
+    ["devspace-client-id"],
+  );
+});
+
 test("oauth.allowedResourceUrls accepts HTTPS and loopback HTTP URLs only", () => {
   for (const url of [
     "https://tunnel.example.com/v1/mcp/tunnel_123",
