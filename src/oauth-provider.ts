@@ -338,11 +338,12 @@ export class SingleUserOAuthProvider implements OAuthServerProvider {
     const now = Math.floor(Date.now() / 1000);
     const accessToken = randomToken();
 
-    const extended = this.oauthStore.extendRefreshToken(refreshTokenHash, clientId, {
-      scopes,
-      expiresAt: now + this.config.refreshTokenTtlSeconds,
-      resource: resource?.href,
-    }, now);
+    const extended = this.oauthStore.extendRefreshToken(
+      refreshTokenHash,
+      clientId,
+      now + this.config.refreshTokenTtlSeconds,
+      now,
+    );
 
     if (!extended) {
       throw new InvalidGrantError("Invalid refresh token");

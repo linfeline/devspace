@@ -30,7 +30,7 @@ test("a listed client keeps the same refresh token and extends its expiry", asyn
   const stateDir = join(root, "reuse");
   setNowSeconds(baseSeconds);
 
-  const { client, tokens } = await issueInitialTokens(stateDir, baseConfig);
+  const { client, tokens } = await issueInitialTokens(stateDir, baseConfig, ["devspace", "read"]);
   const config = { ...baseConfig, persistentRefreshTokenClients: [client.client_id] };
   const provider = new SingleUserOAuthProvider(config, serverUrl, stateDir);
 
@@ -42,6 +42,11 @@ test("a listed client keeps the same refresh token and extends its expiry", asyn
     assert.notEqual(refreshed.access_token, tokens.access_token, "access tokens still rotate");
     assert.equal((await provider.verifyAccessToken(refreshed.access_token)).clientId, client.client_id);
     assert.equal(readRefreshExpiry(stateDir, tokens.refresh_token), baseSeconds + 5 + config.refreshTokenTtlSeconds);
+
+    const narrowed = await provider.exchangeRefreshToken(client, tokens.refresh_token, ["devspace"]);
+    assert.equal(narrowed.scope, "devspace");
+    const otherScope = await provider.exchangeRefreshToken(client, tokens.refresh_token, ["read"]);
+    assert.equal(otherScope.scope, "read", "a narrower access token must not shrink the persisted refresh grant");
 
     const [left, right] = await Promise.all([
       provider.exchangeRefreshToken(client, tokens.refresh_token),
@@ -169,7 +174,7 @@ async function fixture(t: TestContext): Promise<string> {
   return root;
 }
 
-async function issueInitialTokens(stateDir: string, config: OAuthConfig) {
+async function issueInitialTokens(stateDir: string, config: OAuthConfig, scopes = ["devspace"]) {
   const provider = new SingleUserOAuthProvider(config, serverUrl, stateDir);
 
   try {
@@ -185,7 +190,7 @@ async function issueInitialTokens(stateDir: string, config: OAuthConfig) {
       params: {
         redirectUri,
         codeChallenge: "challenge",
-        scopes: ["devspace"],
+        scopes,
         resource,
       },
       expiresAtMs: Date.now() + 60_000,
